@@ -59,7 +59,7 @@ today = datetime.date.today()
 yesterday = today - datetime.timedelta(days=1)
 day_before = today - datetime.timedelta(days=2)
 
-st.subheader(f"📅 Results for {yesterday}")
+st.subheader(f"📊 Results for {yesterday}")
 
 # --- Fetch Data --------------------------------------------------------------------------------------------------
 
