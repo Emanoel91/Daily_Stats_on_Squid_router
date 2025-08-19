@@ -171,6 +171,9 @@ def fetch_chain_stats():
 
 src_df, dst_df, path_df = fetch_chain_stats()
 
+st.write("From:", from_ts, "To:", to_ts)
+st.json(requests.get(CHAIN_APIS[0]).json())
+
 if not src_df.empty:
     # Aggregate unique counts
     num_sources = src_df["chain"].nunique()
