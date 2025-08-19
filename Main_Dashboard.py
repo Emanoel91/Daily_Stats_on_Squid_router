@@ -116,3 +116,105 @@ if not raw_df.empty:
         )
 else:
     st.warning("No data available.")
+
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# --- Dates --------------------------------------------------------------------------------------------------------
+today = datetime.date.today()
+yesterday = today - datetime.timedelta(days=1)
+day_before = today - datetime.timedelta(days=2)
+
+# unix timestamps for GMPStatsByChains API
+from_ts = int(datetime.datetime.combine(yesterday, datetime.time.min).timestamp()) * 1000
+to_ts = int(datetime.datetime.combine(yesterday, datetime.time.max).timestamp()) * 1000
+
+st.subheader(f"📅 Results for {yesterday}")
+
+# --- GMPStatsByChains APIs ----------------------------------------------------------------------------------------
+CHAIN_APIS = [
+    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xce16F69375520ab01377ce7B88f5BA8C48F8D666&fromTime={from_ts}&toTime={to_ts}",
+    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0x492751eC3c57141deb205eC2da8bFcb410738630&fromTime={from_ts}&toTime={to_ts}",
+    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9&fromTime={from_ts}&toTime={to_ts}",
+    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xdf4fFDa22270c12d0b5b3788F1669D709476111E&fromTime={from_ts}&toTime={to_ts}",
+    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8&fromTime={from_ts}&toTime={to_ts}"
+]
+
+# --- Fetch Data ---------------------------------------------------------------------------------------------------
+def fetch_chain_stats():
+    source_records, dest_records, path_records = [], [], []
+    for url in CHAIN_APIS:
+        try:
+            r = requests.get(url)
+            r.raise_for_status()
+            chains = r.json().get("source_chains", [])
+            for sc in chains:
+                source_records.append({
+                    "chain": sc["key"],
+                    "num_txs": sc.get("num_txs", 0),
+                    "volume": sc.get("volume", 0)
+                })
+                for dc in sc.get("destination_chains", []):
+                    dest_records.append({
+                        "chain": dc["key"],
+                        "num_txs": dc.get("num_txs", 0),
+                        "volume": dc.get("volume", 0)
+                    })
+                    path_records.append({
+                        "path": f"{sc['key']} ➡ {dc['key']}",
+                        "num_txs": dc.get("num_txs", 0),
+                        "volume": dc.get("volume", 0)
+                    })
+        except Exception as e:
+            st.error(f"Error fetching {url}: {e}")
+    return pd.DataFrame(source_records), pd.DataFrame(dest_records), pd.DataFrame(path_records)
+
+src_df, dst_df, path_df = fetch_chain_stats()
+
+if not src_df.empty:
+    # Aggregate unique counts
+    num_sources = src_df["chain"].nunique()
+    num_dests = dst_df["chain"].nunique()
+    num_paths = path_df["path"].nunique()
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Number of Source Chains", f"{num_sources}")
+    col2.metric("Number of Destination Chains", f"{num_dests}")
+    col3.metric("Number of Paths", f"{num_paths}")
+
+    # --- Aggregated Tables ----------------------------------------------------------------------------------------
+    src_agg = src_df.groupby("chain").agg({"volume": "sum", "num_txs": "sum"}).reset_index().rename(columns={"chain": "Source Chain", "volume": "Swap Volume", "num_txs": "Swap Count"})
+    dst_agg = dst_df.groupby("chain").agg({"volume": "sum", "num_txs": "sum"}).reset_index().rename(columns={"chain": "Destination Chain", "volume": "Swap Volume", "num_txs": "Swap Count"})
+    path_agg = path_df.groupby("path").agg({"volume": "sum", "num_txs": "sum"}).reset_index().rename(columns={"path": "Path", "volume": "Swap Volume", "num_txs": "Swap Count"})
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.dataframe(src_agg.sort_values("Swap Volume", ascending=False))
+    with c2:
+        st.dataframe(dst_agg.sort_values("Swap Volume", ascending=False))
+    with c3:
+        st.dataframe(path_agg.sort_values("Swap Volume", ascending=False))
+
+    # --- Charts ---------------------------------------------------------------------------------------------------
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        fig = px.bar(src_agg.sort_values("Swap Volume", ascending=False).head(5), x="Swap Volume", y="Source Chain", orientation="h", title="Top 5 Source Chains By Swap Volume")
+        st.plotly_chart(fig, use_container_width=True)
+    with c2:
+        fig = px.bar(dst_agg.sort_values("Swap Volume", ascending=False).head(5), x="Swap Volume", y="Destination Chain", orientation="h", title="Top 5 Destination Chains By Swap Volume")
+        st.plotly_chart(fig, use_container_width=True)
+    with c3:
+        fig = px.bar(path_agg.sort_values("Swap Volume", ascending=False).head(5), x="Swap Volume", y="Path", orientation="h", title="Top 5 Paths By Swap Volume")
+        st.plotly_chart(fig, use_container_width=True)
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        fig = px.bar(src_agg.sort_values("Swap Count", ascending=False).head(5), x="Swap Count", y="Source Chain", orientation="h", title="Top 5 Source Chains By Swap Count")
+        st.plotly_chart(fig, use_container_width=True)
+    with c2:
+        fig = px.bar(dst_agg.sort_values("Swap Count", ascending=False).head(5), x="Swap Count", y="Destination Chain", orientation="h", title="Top 5 Destination Chains By Swap Count")
+        st.plotly_chart(fig, use_container_width=True)
+    with c3:
+        fig = px.bar(path_agg.sort_values("Swap Count", ascending=False).head(5), x="Swap Count", y="Path", orientation="h", title="Top 5 Paths By Swap Count")
+        st.plotly_chart(fig, use_container_width=True)
+else:
+    st.warning("No GMPStatsByChains data available.")
