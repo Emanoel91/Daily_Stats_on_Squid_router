@@ -125,11 +125,8 @@ yesterday = today - datetime.timedelta(days=1)
 day_before = today - datetime.timedelta(days=2)
 
 # unix timestamps for GMPStatsByChains API
-days_back = 7
-from_ts = int((datetime.datetime.utcnow() - datetime.timedelta(days=days_back)).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()) * 1000
-to_ts   = int(datetime.datetime.utcnow().timestamp()) * 1000
-# -- from_ts = int(datetime.datetime.combine(yesterday, datetime.time.min, tzinfo=datetime.timezone.utc).timestamp()) * 1000
-# -- to_ts   = int(datetime.datetime.combine(yesterday, datetime.time.max, tzinfo=datetime.timezone.utc).timestamp()) * 1000
+from_ts = int(datetime.datetime.combine(yesterday, datetime.time.min).timestamp())
+to_ts   = int(datetime.datetime.combine(yesterday, datetime.time.max).timestamp())
 
 st.subheader(f"📅 Results for {yesterday}")
 
@@ -173,9 +170,6 @@ def fetch_chain_stats():
     return pd.DataFrame(source_records), pd.DataFrame(dest_records), pd.DataFrame(path_records)
 
 src_df, dst_df, path_df = fetch_chain_stats()
-
-st.write("From:", from_ts, "To:", to_ts)
-st.json(requests.get(CHAIN_APIS[0]).json())
 
 if not src_df.empty:
     # Aggregate unique counts
