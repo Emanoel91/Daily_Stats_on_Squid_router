@@ -126,17 +126,19 @@ day_before = today - datetime.timedelta(days=2)
 
 # unix timestamps for GMPStatsByChains API
 from_ts = int(datetime.datetime.combine(yesterday, datetime.time.min).timestamp()) * 1000
+to_ts   = int(datetime.datetime.combine(yesterday, datetime.time.max).timestamp()) * 1000
 
 st.subheader(f"📅 Results for {yesterday}")
 
 # --- GMPStatsByChains APIs ----------------------------------------------------------------------------------------
 CHAIN_APIS = [
-    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xce16F69375520ab01377ce7B88f5BA8C48F8D666&fromTime={from_ts}",
-    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0x492751eC3c57141deb205eC2da8bFcb410738630&fromTime={from_ts}",
-    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9&fromTime={from_ts}",
-    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xdf4fFDa22270c12d0b5b3788F1669D709476111E&fromTime={from_ts}",
-    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8&fromTime={from_ts}"
+    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xce16F69375520ab01377ce7B88f5BA8C48F8D666&fromTime={from_ts}&toTime={to_ts}",
+    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0x492751eC3c57141deb205eC2da8bFcb410738630&fromTime={from_ts}&toTime={to_ts}",
+    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9&fromTime={from_ts}&toTime={to_ts}",
+    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xdf4fFDa22270c12d0b5b3788F1669D709476111E&fromTime={from_ts}&toTime={to_ts}",
+    f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8&fromTime={from_ts}&toTime={to_ts}"
 ]
+
 
 # --- Fetch Data ---------------------------------------------------------------------------------------------------
 def fetch_chain_stats():
