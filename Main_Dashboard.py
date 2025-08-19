@@ -222,48 +222,48 @@ else:
 
 # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # --- Prepare data for Sankey charts --------------------------------------------------
-def prepare_sankey_data(df, value_col):
-    # Split path into source and destination
+def prepare_sankey_data_safe(df, value_col):
+    if df.empty or 'path' not in df.columns:
+        return [], [], [], []
+    
+    # Split path into source and target
+    df = df.copy()
     df[['source', 'target']] = df['path'].str.split(' ➡ ', expand=True)
+    
+    # Convert value column to numeric
+    df[value_col] = pd.to_numeric(df[value_col], errors='coerce').fillna(0)
     
     # Unique labels
     labels = list(pd.concat([df['source'], df['target']]).unique())
     
     # Map labels to indices
     label_indices = {label: i for i, label in enumerate(labels)}
-    
-    # Map source and target to indices
-    df['source_idx'] = df['source'].map(label_indices)
-    df['target_idx'] = df['target'].map(label_indices)
+    df['source_idx'] = df['source'].map(label_indices).astype(int)
+    df['target_idx'] = df['target'].map(label_indices).astype(int)
     
     return labels, df['source_idx'], df['target_idx'], df[value_col]
 
-# --- Sankey by Swap Count ----------------------------------------------------------------
-labels_count, source_idx_count, target_idx_count, values_count = prepare_sankey_data(path_df, 'num_txs')
 
-fig_count = go.Figure(go.Sankey(
-    node=dict(label=labels_count, pad=15, thickness=20),
-    link=dict(source=source_idx_count, target=target_idx_count, value=values_count)
-))
+labels_count, source_idx_count, target_idx_count, values_count = prepare_sankey_data_safe(path_df, 'num_txs')
+labels_vol, source_idx_vol, target_idx_vol, values_vol = prepare_sankey_data_safe(path_df, 'volume')
 
-fig_count.update_layout(title_text="Sankey Chart: Source ➡ Destination by Swap Count", font_size=12)
+if labels_count:  # اگر داده وجود داشت
+    fig_count = go.Figure(go.Sankey(
+        node=dict(label=labels_count, pad=15, thickness=20),
+        link=dict(source=source_idx_count, target=target_idx_count, value=values_count)
+    ))
+    fig_count.update_layout(title_text="Sankey Chart: Source ➡ Destination by Swap Count", font_size=12)
 
-# --- Sankey by Swap Volume ----------------------------------------------------------------
-labels_vol, source_idx_vol, target_idx_vol, values_vol = prepare_sankey_data(path_df, 'volume')
+    fig_vol = go.Figure(go.Sankey(
+        node=dict(label=labels_vol, pad=15, thickness=20),
+        link=dict(source=source_idx_vol, target=target_idx_vol, value=values_vol)
+    ))
+    fig_vol.update_layout(title_text="Sankey Chart: Source ➡ Destination by Swap Volume", font_size=12)
 
-fig_vol = go.Figure(go.Sankey(
-    node=dict(label=labels_vol, pad=15, thickness=20),
-    link=dict(source=source_idx_vol, target=target_idx_vol, value=values_vol)
-))
-
-fig_vol.update_layout(title_text="Sankey Chart: Source ➡ Destination by Swap Volume", font_size=12)
-
-# --- Display charts in Streamlit -------------------------------------------------------
-st.subheader("Sankey Charts")
-col1, col2 = st.columns(2)
-
-with col1:
-    st.plotly_chart(fig_count, use_container_width=True)
-
-with col2:
-    st.plotly_chart(fig_vol, use_container_width=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.plotly_chart(fig_count, use_container_width=True)
+    with col2:
+        st.plotly_chart(fig_vol, use_container_width=True)
+else:
+    st.info("No path data available for Sankey charts.")
