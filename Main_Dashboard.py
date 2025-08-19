@@ -125,8 +125,11 @@ yesterday = today - datetime.timedelta(days=1)
 day_before = today - datetime.timedelta(days=2)
 
 # unix timestamps for GMPStatsByChains API
-from_ts = int(datetime.datetime.combine(yesterday, datetime.time.min, tzinfo=datetime.timezone.utc).timestamp()) * 1000
-to_ts   = int(datetime.datetime.combine(yesterday, datetime.time.max, tzinfo=datetime.timezone.utc).timestamp()) * 1000
+days_back = 7
+from_ts = int((datetime.datetime.utcnow() - datetime.timedelta(days=days_back)).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()) * 1000
+to_ts   = int(datetime.datetime.utcnow().timestamp()) * 1000
+# -- from_ts = int(datetime.datetime.combine(yesterday, datetime.time.min, tzinfo=datetime.timezone.utc).timestamp()) * 1000
+# -- to_ts   = int(datetime.datetime.combine(yesterday, datetime.time.max, tzinfo=datetime.timezone.utc).timestamp()) * 1000
 
 st.subheader(f"📅 Results for {yesterday}")
 
