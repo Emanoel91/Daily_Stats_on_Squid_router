@@ -127,7 +127,7 @@ day_before = today - datetime.timedelta(days=2)
 from_ts = int(datetime.datetime.combine(yesterday, datetime.time.min).timestamp())
 to_ts   = int(datetime.datetime.combine(yesterday, datetime.time.max).timestamp())
 
-st.subheader(f"📅 Results for {yesterday}")
+# -- st.subheader(f"📅 Results for {yesterday}")
 
 # --- GMPStatsByChains APIs ----------------------------------------------------------------------------------------
 CHAIN_APIS = [
