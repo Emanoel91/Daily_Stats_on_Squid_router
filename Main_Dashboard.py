@@ -41,69 +41,78 @@ st.info("📊Charts initially display data for a default time range. Select a cu
 st.info("⏳On-chain data retrieval may take a few moments. Please wait while the results load.")
 
 # --- API List -----------------------------------------------------------------------------------------------------
+APIS = [
+    "https://api.axelarscan.io/gmp/GMPChart?contractAddress=0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+    "https://api.axelarscan.io/gmp/GMPChart?contractAddress=0x492751eC3c57141deb205eC2da8bFcb410738630",
+    "https://api.axelarscan.io/gmp/GMPChart?contractAddress=0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9",
+    "https://api.axelarscan.io/gmp/GMPChart?contractAddress=0xdf4fFDa22270c12d0b5b3788F1669D709476111E",
+    "https://api.axelarscan.io/gmp/GMPChart?contractAddress=0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8",
+    "https://api.axelarscan.io/token/transfersChart?contractAddress=0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+    "https://api.axelarscan.io/token/transfersChart?contractAddress=0x492751eC3c57141deb205eC2da8bFcb410738630",
+    "https://api.axelarscan.io/token/transfersChart?contractAddress=0xDC3D8e1Abe590BCa428a8a2FC4CfDbD1AcF57Bd9",
+    "https://api.axelarscan.io/token/transfersChart?contractAddress=0xdf4fFDa22270c12d0b5b3788F1669D709476111E",
+    "https://api.axelarscan.io/token/transfersChart?contractAddress=0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8"
+]
 
+# --- Date Setup --------------------------------------------------------------------------------------------------
+
+today = datetime.date.today()
+yesterday = today - datetime.timedelta(days=1)
+day_before = today - datetime.timedelta(days=2)
+
+st.subheader(f"📅 Results for {yesterday}")
 
 # --- Fetch Data --------------------------------------------------------------------------------------------------
 
-
 def fetch_data():
-all_data = []
-for url in APIS:
-try:
-r = requests.get(url)
-r.raise_for_status()
-data = r.json().get("data", [])
-all_data.extend(data)
-except Exception as e:
-st.error(f"Error fetching {url}: {e}")
-return pd.DataFrame(all_data)
-
+    all_data = []
+    for url in APIS:
+        try:
+            r = requests.get(url)
+            r.raise_for_status()
+            data = r.json().get("data", [])
+            all_data.extend(data)
+        except Exception as e:
+            st.error(f"Error fetching {url}: {e}")
+    return pd.DataFrame(all_data)
 
 raw_df = fetch_data()
 
-
 if not raw_df.empty:
-# Convert timestamp to date
-raw_df["date"] = pd.to_datetime(raw_df["timestamp"], unit="ms").dt.date
+    # Convert timestamp to date
+    raw_df["date"] = pd.to_datetime(raw_df["timestamp"], unit="ms").dt.date
 
+    # Aggregate daily totals
+    daily_df = raw_df.groupby("date").agg({"volume": "sum", "num_txs": "sum"}).reset_index()
 
-# Aggregate daily totals
-daily_df = raw_df.groupby("date").agg({"volume": "sum", "num_txs": "sum"}).reset_index()
+    # Get yesterday + day before
+    y_row = daily_df[daily_df["date"] == yesterday]
+    d_row = daily_df[daily_df["date"] == day_before]
 
+    vol_y, txs_y = (y_row["volume"].sum(), y_row["num_txs"].sum()) if not y_row.empty else (0, 0)
+    vol_d, txs_d = (d_row["volume"].sum(), d_row["num_txs"].sum()) if not d_row.empty else (0, 0)
 
-# Get yesterday + day before
-y_row = daily_df[daily_df["date"] == yesterday]
-d_row = daily_df[daily_df["date"] == day_before]
+    # Percentage change
+    vol_change = ((vol_y - vol_d) / vol_d * 100) if vol_d != 0 else 0
+    txs_change = ((txs_y - txs_d) / txs_d * 100) if txs_d != 0 else 0
 
+    # --- KPI Layout ---------------------------------------------------------------------------------------------
+    col1, col2 = st.columns(2)
 
-vol_y, txs_y = (y_row["volume"].sum(), y_row["num_txs"].sum()) if not y_row.empty else (0, 0)
-vol_d, txs_d = (d_row["volume"].sum(), d_row["num_txs"].sum()) if not d_row.empty else (0, 0)
+    with col1:
+        st.metric(
+            label="Volume of Swaps",
+            value=f"{vol_y:,.2f}",
+            delta=f"{vol_change:.2f}%",
+            delta_color="normal"
+        )
 
-
-# Percentage change
-vol_change = ((vol_y - vol_d) / vol_d * 100) if vol_d != 0 else 0
-txs_change = ((txs_y - txs_d) / txs_d * 100) if txs_d != 0 else 0
-
-
-# --- KPI Layout ---------------------------------------------------------------------------------------------
-col1, col2 = st.columns(2)
-
-
-with col1:
-st.metric(
-label="Volume of Swaps",
-value=f"{vol_y:,.2f}",
-delta=f"{vol_change:.2f}%",
-delta_color="normal"
-)
-
-
-with col2:
-st.metric(
-label="Number of Swaps",
-value=f"{txs_y:,}",
-delta=f"{txs_change:.2f}%",
-delta_color="normal"
-)
+    with col2:
+        st.metric(
+            label="Number of Swaps",
+            value=f"{txs_y:,}",
+            delta=f"{txs_change:.2f}%",
+            delta_color="normal"
+        )
 else:
-st.warning("No data available.")
+    st.warning("No data available.")
