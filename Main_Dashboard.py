@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 import plotly.express as px
-import plotly.graph_objects as go
 import requests
 import datetime
 
@@ -54,7 +52,6 @@ APIS = [
 ]
 
 # --- Date Setup --------------------------------------------------------------------------------------------------
-
 today = datetime.date.today()
 yesterday = today - datetime.timedelta(days=1)
 day_before = today - datetime.timedelta(days=2)
@@ -62,7 +59,6 @@ day_before = today - datetime.timedelta(days=2)
 st.subheader(f"📊 Results for {yesterday}")
 
 # --- Fetch Data --------------------------------------------------------------------------------------------------
-
 def fetch_data():
     all_data = []
     for url in APIS:
@@ -116,7 +112,6 @@ if not raw_df.empty:
 else:
     st.warning("No data available.")
 
-
 # ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # --- Dates --------------------------------------------------------------------------------------------------------
 today = datetime.date.today()
@@ -127,8 +122,6 @@ day_before = today - datetime.timedelta(days=2)
 from_ts = int(datetime.datetime.combine(yesterday, datetime.time.min).timestamp())
 to_ts   = int(datetime.datetime.combine(yesterday, datetime.time.max).timestamp())
 
-# -- st.subheader(f"📅 Results for {yesterday}")
-
 # --- GMPStatsByChains APIs ----------------------------------------------------------------------------------------
 CHAIN_APIS = [
     f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xce16F69375520ab01377ce7B88f5BA8C48F8D666&fromTime={from_ts}&toTime={to_ts}",
@@ -138,8 +131,7 @@ CHAIN_APIS = [
     f"https://api.axelarscan.io/gmp/GMPStatsByChains?contractAddress=0xe6B3949F9bBF168f4E3EFc82bc8FD849868CC6d8&fromTime={from_ts}&toTime={to_ts}"
 ]
 
-
-# --- Fetch Data ---------------------------------------------------------------------------------------------------
+# --- Fetch Chain Stats ---------------------------------------------------------------------------------------------------
 def fetch_chain_stats():
     source_records, dest_records, path_records = [], [], []
     for url in CHAIN_APIS:
@@ -182,36 +174,64 @@ if not src_df.empty:
     col3.metric("Number of Paths", f"{num_paths}")
 
     # --- Aggregated Tables ----------------------------------------------------------------------------------------
-    src_agg = src_df.groupby("chain").agg({"volume": "sum", "num_txs": "sum"}).reset_index().rename(columns={"chain": "Source Chain", "volume": "Swap Volume", "num_txs": "Swap Count"})
-    dst_agg = dst_df.groupby("chain").agg({"volume": "sum", "num_txs": "sum"}).reset_index().rename(columns={"chain": "Destination Chain", "volume": "Swap Volume", "num_txs": "Swap Count"})
-    path_agg = path_df.groupby("path").agg({"volume": "sum", "num_txs": "sum"}).reset_index().rename(columns={"path": "Path", "volume": "Swap Volume", "num_txs": "Swap Count"})
+    src_agg = src_df.groupby("chain").agg({"volume": "sum", "num_txs": "sum"}).reset_index().rename(
+        columns={"chain": "Source Chain", "volume": "Swap Volume", "num_txs": "Swap Count"}
+    )
+    dst_agg = dst_df.groupby("chain").agg({"volume": "sum", "num_txs": "sum"}).reset_index().rename(
+        columns={"chain": "Destination Chain", "volume": "Swap Volume", "num_txs": "Swap Count"}
+    )
+    path_agg = path_df.groupby("path").agg({"volume": "sum", "num_txs": "sum"}).reset_index().rename(
+        columns={"path": "Path", "volume": "Swap Volume", "num_txs": "Swap Count"}
+    )
 
-    c1, c2, c3 = st.columns(3) 
-    with c1: st.dataframe(src_agg.sort_values("Swap Volume", ascending=False))
-    with c2: st.dataframe(dst_agg.sort_values("Swap Volume", ascending=False))
-    with c3: st.dataframe(path_agg.sort_values("Swap Volume", ascending=False))
+    # helper function to sort + reset index starting from 1
+    def _one_based_index(df, sort_by):
+        out = df.sort_values(sort_by, ascending=False).reset_index(drop=True)
+        out.index = range(1, len(out) + 1)
+        return out
+
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.dataframe(_one_based_index(src_agg, "Swap Volume"), use_container_width=True)
+    with c2:
+        st.dataframe(_one_based_index(dst_agg, "Swap Volume"), use_container_width=True)
+    with c3:
+        st.dataframe(_one_based_index(path_agg, "Swap Volume"), use_container_width=True)
 
     # --- Charts ---------------------------------------------------------------------------------------------------
     c1, c2, c3 = st.columns(3)
     with c1:
-        fig = px.bar(src_agg.sort_values("Swap Volume", ascending=False).head(5), x="Swap Volume", y="Source Chain", orientation="h", title="Top 5 Source Chains By Swap Volume")
+        fig = px.bar(src_agg.sort_values("Swap Volume", ascending=False).head(5),
+                     x="Swap Volume", y="Source Chain", orientation="h",
+                     title="Top 5 Source Chains By Swap Volume")
         st.plotly_chart(fig, use_container_width=True)
     with c2:
-        fig = px.bar(dst_agg.sort_values("Swap Volume", ascending=False).head(5), x="Swap Volume", y="Destination Chain", orientation="h", title="Top 5 Destination Chains By Swap Volume")
+        fig = px.bar(dst_agg.sort_values("Swap Volume", ascending=False).head(5),
+                     x="Swap Volume", y="Destination Chain", orientation="h",
+                     title="Top 5 Destination Chains By Swap Volume")
         st.plotly_chart(fig, use_container_width=True)
     with c3:
-        fig = px.bar(path_agg.sort_values("Swap Volume", ascending=False).head(5), x="Swap Volume", y="Path", orientation="h", title="Top 5 Paths By Swap Volume")
+        fig = px.bar(path_agg.sort_values("Swap Volume", ascending=False).head(5),
+                     x="Swap Volume", y="Path", orientation="h",
+                     title="Top 5 Paths By Swap Volume")
         st.plotly_chart(fig, use_container_width=True)
 
     c1, c2, c3 = st.columns(3)
     with c1:
-        fig = px.bar(src_agg.sort_values("Swap Count", ascending=False).head(5), x="Swap Count", y="Source Chain", orientation="h", title="Top 5 Source Chains By Swap Count")
+        fig = px.bar(src_agg.sort_values("Swap Count", ascending=False).head(5),
+                     x="Swap Count", y="Source Chain", orientation="h",
+                     title="Top 5 Source Chains By Swap Count")
         st.plotly_chart(fig, use_container_width=True)
     with c2:
-        fig = px.bar(dst_agg.sort_values("Swap Count", ascending=False).head(5), x="Swap Count", y="Destination Chain", orientation="h", title="Top 5 Destination Chains By Swap Count")
+        fig = px.bar(dst_agg.sort_values("Swap Count", ascending=False).head(5),
+                     x="Swap Count", y="Destination Chain", orientation="h",
+                     title="Top 5 Destination Chains By Swap Count")
         st.plotly_chart(fig, use_container_width=True)
     with c3:
-        fig = px.bar(path_agg.sort_values("Swap Count", ascending=False).head(5), x="Swap Count", y="Path", orientation="h", title="Top 5 Paths By Swap Count")
+        fig = px.bar(path_agg.sort_values("Swap Count", ascending=False).head(5),
+                     x="Swap Count", y="Path", orientation="h",
+                     title="Top 5 Paths By Swap Count")
         st.plotly_chart(fig, use_container_width=True)
+
 else:
     st.warning("No GMPStatsByChains data available.")
