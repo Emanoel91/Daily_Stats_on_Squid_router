@@ -186,22 +186,10 @@ if not src_df.empty:
     dst_agg = dst_df.groupby("chain").agg({"volume": "sum", "num_txs": "sum"}).reset_index().rename(columns={"chain": "Destination Chain", "volume": "Swap Volume", "num_txs": "Swap Count"})
     path_agg = path_df.groupby("path").agg({"volume": "sum", "num_txs": "sum"}).reset_index().rename(columns={"path": "Path", "volume": "Swap Volume", "num_txs": "Swap Count"})
 
-    c1, c2, c3 = st.columns(3)
-
-with c1:
-    src_sorted = src_agg.sort_values("Swap Volume", ascending=False).reset_index(drop=True)
-    src_sorted.index = src_sorted.index + 1  # ایندکس از 1 شروع شود
-    st.dataframe(src_sorted)
-
-with c2:
-    dst_sorted = dst_agg.sort_values("Swap Volume", ascending=False).reset_index(drop=True)
-    dst_sorted.index = dst_sorted.index + 1
-    st.dataframe(dst_sorted)
-
-with c3:
-    path_sorted = path_agg.sort_values("Swap Volume", ascending=False).reset_index(drop=True)
-    path_sorted.index = path_sorted.index + 1
-    st.dataframe(path_sorted)
+    c1, c2, c3 = st.columns(3) 
+    with c1: st.dataframe(src_agg.sort_values("Swap Volume", ascending=False))
+    with c2: st.dataframe(dst_agg.sort_values("Swap Volume", ascending=False))
+    with c3: st.dataframe(path_agg.sort_values("Swap Volume", ascending=False))
 
     # --- Charts ---------------------------------------------------------------------------------------------------
     c1, c2, c3 = st.columns(3)
